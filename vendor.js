@@ -9,7 +9,8 @@ import {
     query,
     where,
     getDocs,
-    deleteDoc
+    deleteDoc,
+    updateDoc
   } from "./firebase.js";
   
   const vendorContent = document.getElementById("vendorContent");
@@ -188,41 +189,70 @@ import {
           <div class="spinner"></div>
         </div>
       `;
-  
+    
       const foodQuery = query(
         collection(db, "foods"),
         where("shopId", "==", shopId)
       );
-  
+    
       const foodSnap = await getDocs(foodQuery);
       foodList.innerHTML = "";
-  
+    
       foodSnap.forEach(docSnap => {
         const food = docSnap.data();
-        const foodId = docSnap.id
-  
+        const foodId = docSnap.id;
+    
         const div = document.createElement("div");
-  
         div.classList.add("food");
-  
+    
         const placeholder = './assets/fp.png';
         const imgSrc = food.imageURL || placeholder;
-  
-        div.innerHTML = `<div class="foodAlign1">
-          <img class="foodImg" src="${imgSrc}" alt="food"/>
-          <p> ${food.name}</p>
+    
+        div.innerHTML = `
+          <div class="foodAlign1">
+            <img class="foodImg" src="${imgSrc}" alt="food"/>
+            <p>${food.name}</p>
           </div>
           <div class="foodAlign2">
-          <strong> Rs ${food.price} </strong>
-          <button class="deleteBtn" data-id="${foodId}">Delete</button>
-          </div>`;
-  
-        const deleteBtn = div.querySelector(".deleteBtn");
-        deleteBtn.onclick = () => deleteFood(foodId);
-  
+            <strong>Rs ${food.price}</strong>
+            <div><button class="updateBtn">Update</button>   
+            <button class="deleteBtn">Delete</button>
+            </div>
+          </div>
+        `;
+    
+       div.querySelector(".deleteBtn").onclick = () => deleteFood(foodId);
+    
+        div.querySelector(".updateBtn").onclick = async () => {
+          const newName = prompt("New food name:", food.name);
+          const newPrice = prompt("New price:", food.price);
+    
+          if (!newName || newPrice <= 0) return;
+    
+          try {
+            await updateDoc(doc(db, "foods", foodId), {
+              name: newName,
+              price: Number(newPrice)
+            });
+    
+            Swal.fire({
+              icon: "success",
+              text: "Food updated"
+            });
+    
+            loadFoods();
+          } catch (err) {
+            Swal.fire({
+              icon: "error",
+              text: "Update failed"
+            });
+          }
+        };
+    
         foodList.appendChild(div);
       });
     }
+    
   
     async function deleteFood(foodId) {
       const confirm = await Swal.fire({
